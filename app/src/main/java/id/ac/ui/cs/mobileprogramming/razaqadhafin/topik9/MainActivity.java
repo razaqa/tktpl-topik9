@@ -6,12 +6,19 @@ import androidx.core.app.ActivityCompat;
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
+
+import com.google.ar.sceneform.AnchorNode;
+import com.google.ar.sceneform.Node;
+import com.google.ar.sceneform.assets.RenderableSource;
+import com.google.ar.sceneform.rendering.ModelRenderable;
+import com.google.ar.sceneform.ux.ArFragment;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -29,7 +36,10 @@ import retrofit2.Retrofit;
 public class MainActivity extends AppCompatActivity {
 
     private final int PERMISSION_CODE = 1;
-    
+
+    private ArFragment arFragment;
+    private ModelRenderable renderable;
+
     private String retrofitBaseUrl;
     private String fileUrl;
     private String fileName;
@@ -52,7 +62,36 @@ public class MainActivity extends AppCompatActivity {
             fileUrl = editTextLink.getText().toString();
             retrofitBaseUrl = fileUrl.split("/")[0] + "//" + fileUrl.split("/")[2];
             downloadFile(fileUrl);
+            buildModel();
         });
+
+        arFragment = (ArFragment) getSupportFragmentManager().findFragmentById(R.id.arFragment);
+
+        arFragment.setOnTapArPlaneListener((hitResult, plane, motionEvent) -> {
+            AnchorNode anchorNode = new AnchorNode(hitResult.createAnchor());
+            anchorNode.setRenderable(renderable);
+            arFragment.getArSceneView().getScene().addChild(anchorNode);
+        });
+    }
+
+    private void buildModel() {
+        File downloadPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        File file = new File( downloadPath + File.separator + fileName);
+
+        RenderableSource renderableSource = RenderableSource
+                .builder()
+                .setSource(this, Uri.parse(file.getPath()), RenderableSource.SourceType.GLB)
+                .setRecenterMode(RenderableSource.RecenterMode.ROOT)
+                .build();
+        ModelRenderable
+                .builder()
+                .setSource(this, renderableSource)
+                .setRegistryId(file.getPath())
+                .build()
+                .thenAccept(modelRenderable -> {
+                    Toast.makeText(this, "Model built", Toast.LENGTH_SHORT).show();;
+                    renderable = modelRenderable;
+                });
     }
 
     protected boolean isPermissionsNotGranted() {
@@ -97,11 +136,8 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean writeResponseBodyToDisk(ResponseBody body) {
         try {
-            File downloadPath =
-                    Environment.getExternalStoragePublicDirectory(
-                            Environment.DIRECTORY_DOWNLOADS);
-            File futureStudioIconFile =
-                    new File( downloadPath + File.separator + fileName);
+            File downloadPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            File file = new File( downloadPath + File.separator + fileName);
 
             InputStream inputStream = null;
             OutputStream outputStream = null;
@@ -111,7 +147,7 @@ public class MainActivity extends AppCompatActivity {
                 long fileSizeDownloaded = 0;
 
                 inputStream = body.byteStream();
-                outputStream = new FileOutputStream(futureStudioIconFile);
+                outputStream = new FileOutputStream(file);
                 while (true) {
                     int read = inputStream.read(fileReader);
                     if (read == -1) {

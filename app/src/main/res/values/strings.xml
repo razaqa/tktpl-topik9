@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">Topik 9</string>
     <string name="button_download_text">Download</string>
-    <string name="edit_text_url_text">url</string>
-    <string name="edit_text_file_name_text">file name.format</string>
+    <string name="edit_text_url_text">File URL</string>
+    <string name="edit_text_file_name_text">File Name</string>
 </resources>
